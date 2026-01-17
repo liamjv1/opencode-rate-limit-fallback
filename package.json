@@ -18,11 +18,11 @@
     "model",
     "plugin"
   ],
-  "author": "liamvinberg",
+  "author": "liamjv1",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/liamvinberg/opencode-rate-limit-fallback.git"
+    "url": "https://github.com/liamjv1/opencode-rate-limit-fallback.git"
   },
   "peerDependencies": {
     "@opencode-ai/plugin": ">=1.0.0"
