@@ -59,16 +59,6 @@ Create `rate-limit-fallback.json` in your OpenCode config directory:
 }
 ```
 
-**Object format (legacy):**
-```json
-{
-  "fallbackModel": {
-    "providerID": "anthropic",
-    "modelID": "claude-opus-4-5"
-  }
-}
-```
-
 ### Custom Patterns
 
 Add your own rate limit detection patterns:
