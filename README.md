@@ -27,11 +27,16 @@ Create `rate-limit-fallback.json` in your OpenCode config directory:
 ```json
 {
   "enabled": true,
-  "fallbackModel": {
-    "providerID": "anthropic",
-    "modelID": "claude-opus-4-5"
-  },
-  "cooldownMs": 300000
+  "fallbackModel": "anthropic/claude-opus-4-5",
+  "cooldownMs": 300000,
+  "patterns": [
+    "rate limit",
+    "usage limit",
+    "too many requests",
+    "quota exceeded",
+    "overloaded"
+  ],
+  "logging": true
 }
 ```
 
@@ -40,18 +45,61 @@ Create `rate-limit-fallback.json` in your OpenCode config directory:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enabled` | boolean | `true` | Enable/disable the plugin |
-| `fallbackModel.providerID` | string | `"anthropic"` | Provider for fallback model |
-| `fallbackModel.modelID` | string | `"claude-opus-4-5"` | Model ID for fallback |
+| `fallbackModel` | string \| object | `"anthropic/claude-opus-4-5"` | Fallback model (see formats below) |
 | `cooldownMs` | number | `300000` | Cooldown period in ms (default: 5 minutes) |
+| `patterns` | string[] | (see below) | Custom rate limit detection patterns |
+| `logging` | boolean | `false` | Enable file-based logging |
+
+### Fallback Model Formats
+
+**String format (recommended):**
+```json
+{
+  "fallbackModel": "anthropic/claude-opus-4-5"
+}
+```
+
+**Object format (legacy):**
+```json
+{
+  "fallbackModel": {
+    "providerID": "anthropic",
+    "modelID": "claude-opus-4-5"
+  }
+}
+```
+
+### Custom Patterns
+
+Add your own rate limit detection patterns:
+
+```json
+{
+  "patterns": [
+    "rate limit",
+    "usage limit",
+    "too many requests",
+    "quota exceeded",
+    "overloaded",
+    "capacity exceeded"
+  ]
+}
+```
+
+Patterns are case-insensitive and matched against the retry message.
+
+### Logging
+
+When `logging: true`, logs are written to:
+```
+~/.local/share/opencode/logs/rate-limit-fallback.log
+```
+
+Log entries include timestamps and details about rate limit detection, fallback attempts, and errors.
 
 ## How It Works
 
-1. **Detection**: Listens for `session.status` events with retry messages containing rate limit keywords:
-   - "rate limit"
-   - "usage limit"
-   - "too many requests"
-   - "quota exceeded"
-   - "overloaded"
+1. **Detection**: Listens for `session.status` events with retry messages matching configured patterns.
 
 2. **Fallback**: When detected:
    - Aborts the current retry loop
@@ -59,6 +107,18 @@ Create `rate-limit-fallback.json` in your OpenCode config directory:
    - Starts a cooldown timer
 
 3. **Cooldown**: During the cooldown period, subsequent rate limits on the same session are ignored (prevents spam). After cooldown expires, normal model selection resumes.
+
+## Local Development
+
+For local development, use a `file://` URL in your config:
+
+```json
+{
+  "plugin": [
+    "file:///path/to/opencode-rate-limit-fallback/index.ts"
+  ]
+}
+```
 
 ## License
 
