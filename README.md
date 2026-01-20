@@ -93,10 +93,14 @@ Log entries include timestamps and details about rate limit detection, fallback 
 
 2. **Fallback**: When detected:
    - Aborts the current retry loop
-   - Sends a "continue" prompt with the fallback model
+   - Retrieves the last user message from the session
+   - Reverts the session to before that message (removing the failed attempt)
+   - Re-sends the original message with the fallback model
    - Starts a cooldown timer
 
 3. **Cooldown**: During the cooldown period, subsequent rate limits on the same session are ignored (prevents spam). After cooldown expires, normal model selection resumes.
+
+This approach keeps the conversation history clean - no "continue" messages or duplicates. The session seamlessly continues with the fallback model as if the rate limit never happened.
 
 ## Local Development
 

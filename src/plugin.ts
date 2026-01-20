@@ -7,6 +7,32 @@ interface SessionState {
   cooldownEndTime: number
 }
 
+interface MessageInfo {
+  id: string
+  role: "user" | "assistant"
+  sessionID: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
+  agent?: string
+}
+
+interface MessagePart {
+  id: string
+  type: string
+  text?: string
+  mime?: string
+  filename?: string
+  url?: string
+  name?: string
+}
+
+interface MessageWithParts {
+  info: MessageInfo
+  parts: MessagePart[]
+}
+
 const sessionStates = new Map<string, SessionState>()
 
 function createPatternMatcher(patterns: string[]) {
@@ -72,21 +98,63 @@ export async function createPlugin(context: PluginInput): Promise<Hooks> {
             })
 
             try {
-              await context.client.session.abort({
-                path: { id: sessionID },
+              await context.client.session.abort({ path: { id: sessionID } })
+              await new Promise(resolve => setTimeout(resolve, 100))
+
+              const messagesResponse = await context.client.session.messages({ path: { id: sessionID } })
+              const messages = messagesResponse.data as MessageWithParts[] | undefined
+
+              if (!messages || messages.length === 0) {
+                await logger.error("No messages found in session", { sessionID })
+                return
+              }
+
+              const lastUserMessage = [...messages].reverse().find(m => m.info.role === "user")
+              if (!lastUserMessage) {
+                await logger.error("No user message found in session", { sessionID })
+                return
+              }
+
+              const lastUserIndex = messages.findIndex(m => m.info.id === lastUserMessage.info.id)
+              const revertToMessage = lastUserIndex > 0 ? messages[lastUserIndex - 1] : null
+
+              await logger.info("Found last user message", {
+                sessionID,
+                messageId: lastUserMessage.info.id,
+                revertToId: revertToMessage?.info.id ?? "none",
               })
 
-              await new Promise(resolve => setTimeout(resolve, 100))
+              if (revertToMessage) {
+                await context.client.session.revert({
+                  path: { id: sessionID },
+                  body: { messageID: revertToMessage.info.id },
+                })
+                await new Promise(resolve => setTimeout(resolve, 100))
+              }
+
+              const originalParts = lastUserMessage.parts
+                .filter(p => !isSyntheticPart(p))
+                .map(p => convertToPromptPart(p))
+                .filter((p): p is NonNullable<typeof p> => p !== null)
+
+              if (originalParts.length === 0) {
+                await logger.error("No valid parts found in user message", { sessionID })
+                return
+              }
 
               await context.client.session.prompt({
                 path: { id: sessionID },
                 body: {
                   model: fallbackModel,
-                  parts: [{ type: "text", text: "continue" }],
+                  agent: lastUserMessage.info.agent,
+                  parts: originalParts,
                 },
               })
 
-              await logger.info("Fallback prompt sent successfully", { sessionID })
+              await logger.info("Fallback prompt sent successfully", {
+                sessionID,
+                partsCount: originalParts.length,
+              })
             } catch (err) {
               await logger.error("Failed to send fallback prompt", {
                 sessionID,
@@ -114,5 +182,31 @@ export async function createPlugin(context: PluginInput): Promise<Hooks> {
         }
       }
     },
+  }
+}
+
+function isSyntheticPart(part: MessagePart): boolean {
+  return (part as any).synthetic === true
+}
+
+function convertToPromptPart(part: MessagePart): { type: "text"; text: string } | { type: "file"; mime: string; filename?: string; url: string } | { type: "agent"; name: string } | null {
+  switch (part.type) {
+    case "text":
+      if (part.text) {
+        return { type: "text", text: part.text }
+      }
+      return null
+    case "file":
+      if (part.url && part.mime) {
+        return { type: "file", mime: part.mime, filename: part.filename, url: part.url }
+      }
+      return null
+    case "agent":
+      if (part.name) {
+        return { type: "agent", name: part.name }
+      }
+      return null
+    default:
+      return null
   }
 }

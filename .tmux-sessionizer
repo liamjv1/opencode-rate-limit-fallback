@@ -1,0 +1,8 @@
+tmux rename-window -t 1 "nvim"
+tmux send-keys -t 1 "nvim" C-m
+tmux new-window -t 2 -n "cmd"
+tmux new-window -t 3 -n "run"
+tmux split-window -t 3 -h
+tmux new-window -t 4 -n "ai"
+tmux send-keys -t 4 "opencode ." C-m
+tmux select-window -t 1

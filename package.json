@@ -1,35 +1,35 @@
 {
-  "name": "opencode-rate-limit-fallback",
-  "version": "0.2.0",
-  "description": "OpenCode plugin that automatically switches to a fallback model when rate limits are hit",
-  "type": "module",
-  "main": "index.ts",
-  "files": [
-    "index.ts",
-    "src"
-  ],
-  "scripts": {
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [
-    "opencode",
-    "rate-limit",
-    "fallback",
-    "model",
-    "plugin"
-  ],
-  "author": "liamjv1",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/liamjv1/opencode-rate-limit-fallback.git"
-  },
-  "peerDependencies": {
-    "@opencode-ai/plugin": ">=1.0.0"
-  },
-  "devDependencies": {
-    "@opencode-ai/plugin": "^1.0.0",
-    "@types/node": "^22.0.0",
-    "typescript": "^5.0.0"
-  }
+	"name": "opencode-rate-limit-fallback",
+	"version": "0.2.1",
+	"description": "OpenCode plugin that automatically switches to a fallback model when rate limits are hit",
+	"type": "module",
+	"main": "index.ts",
+	"files": [
+		"index.ts",
+		"src"
+	],
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"keywords": [
+		"opencode",
+		"rate-limit",
+		"fallback",
+		"model",
+		"plugin"
+	],
+	"author": "liamjv1",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/liamjv1/opencode-rate-limit-fallback.git"
+	},
+	"peerDependencies": {
+		"@opencode-ai/plugin": ">=1.0.0"
+	},
+	"devDependencies": {
+		"@opencode-ai/plugin": "^1.0.0",
+		"@types/node": "^22.0.0",
+		"typescript": "^5.0.0"
+	}
 }
