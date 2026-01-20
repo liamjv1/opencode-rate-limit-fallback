@@ -98,9 +98,11 @@ export async function createPlugin(context: PluginInput): Promise<Hooks> {
             })
 
             try {
+              await logger.info("Aborting session", { sessionID })
               await context.client.session.abort({ path: { id: sessionID } })
-              await new Promise(resolve => setTimeout(resolve, 100))
+              await new Promise(resolve => setTimeout(resolve, 200))
 
+              await logger.info("Fetching messages", { sessionID })
               const messagesResponse = await context.client.session.messages({ path: { id: sessionID } })
               const messages = messagesResponse.data as MessageWithParts[] | undefined
 
@@ -115,22 +117,23 @@ export async function createPlugin(context: PluginInput): Promise<Hooks> {
                 return
               }
 
-              const lastUserIndex = messages.findIndex(m => m.info.id === lastUserMessage.info.id)
-              const revertToMessage = lastUserIndex > 0 ? messages[lastUserIndex - 1] : null
-
               await logger.info("Found last user message", {
                 sessionID,
                 messageId: lastUserMessage.info.id,
-                revertToId: revertToMessage?.info.id ?? "none",
+                totalMessages: messages.length,
               })
 
-              if (revertToMessage) {
-                await context.client.session.revert({
-                  path: { id: sessionID },
-                  body: { messageID: revertToMessage.info.id },
-                })
-                await new Promise(resolve => setTimeout(resolve, 100))
-              }
+              await logger.info("Reverting session", { sessionID, messageId: lastUserMessage.info.id })
+              const revertResponse = await context.client.session.revert({
+                path: { id: sessionID },
+                body: { messageID: lastUserMessage.info.id },
+              })
+              await logger.info("Revert completed", {
+                sessionID,
+                revertStatus: revertResponse.response?.status,
+                hasRevertState: !!(revertResponse.data as any)?.revert,
+              })
+              await new Promise(resolve => setTimeout(resolve, 500))
 
               const originalParts = lastUserMessage.parts
                 .filter(p => !isSyntheticPart(p))
@@ -142,6 +145,11 @@ export async function createPlugin(context: PluginInput): Promise<Hooks> {
                 return
               }
 
+              await logger.info("Sending prompt with fallback model", {
+                sessionID,
+                model: fallbackModel,
+                partsCount: originalParts.length,
+              })
               await context.client.session.prompt({
                 path: { id: sessionID },
                 body: {
@@ -151,10 +159,7 @@ export async function createPlugin(context: PluginInput): Promise<Hooks> {
                 },
               })
 
-              await logger.info("Fallback prompt sent successfully", {
-                sessionID,
-                partsCount: originalParts.length,
-              })
+              await logger.info("Fallback prompt sent successfully", { sessionID })
             } catch (err) {
               await logger.error("Failed to send fallback prompt", {
                 sessionID,
